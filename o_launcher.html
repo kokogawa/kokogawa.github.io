@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body>
+	<div class="container-fluid">
+		<div class="position-absolute fixed-bottom" id="obniz-debug"></div>
+		<nav class="row navbar navbar-expand-lg navbar-light bg-light">
+			<h1 class="display-4" style="font-size:2em">Drive Controller</h1>
+			<form class="form-inline">
+				<input id="obnizId" class="form-control mr-sm-2" type="text" placeholder="obniz ID" aria-label="obniz ID">
+     			<button id="btnConnect" class="btn btn-success my-2 my-sm-0"  type="submit">Connect</button>
+			</form>
+		</nav>
+		<div class="row justify-content-around align-items-center mt-4" style="height:5em">
+			<button id="motorA-ccw" class="btn btn-primary col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>▲</button>
+			<button id="launcher-up" class="btn btn-warning col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>up</button>
+			<button id="motorB-ccw" class="btn btn-primary col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>▲</button>
+		</div>
+		<div class="row justify-content-center align-items-center mt-2" style="height:5em">
+			<button id="lauch-l" class="btn btn-danger col-sm-2 col-md-1 h-100" style="font-size:2em; font-weight:bold;" disabled>■</button>
+			<button id="lauch-r" class="btn btn-danger col-sm-2 col-md-1 offset-sm-1 h-100" style="font-size:2em; font-weight:bold;" disabled>■</button>
+		</div>
+		<div class="row justify-content-around align-items-center mt-2" style="height:5em">
+			<button id="motorA-cw" class="btn btn-primary col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>▼</button>
+			<button id="launcher-down" class="btn btn-warning col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>down</button>
+			<button id="motorB-cw" class="btn btn-primary col-sm-3 col-md-2 h-100" style="font-size:2em; font-weight:bold;" disabled>▼</button>
+		</div>
+	</div>
+	
+	<script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
+	<script src="https://unpkg.com/obniz@2.2.0/obniz.js"></script>
+	<script src="https://artec-kk.github.io/obniz-artecrobo2/artec.js"></script>
+	<script>
+		
+		var atcRobo = null
+		
+		$("#btnConnect").on("click", (e) => {
+			e.preventDefault();
+			var obnizId = $("#obnizId").val();
+			try{
+				atcRobo = new Artec.ArtecRobo(obnizId);
+				atcRobo.onconnect = controllStart;
+			}
+			catch(err){
+				alert("obniz-IDに誤りがあります。");
+				console.log(err)
+			}
+		});
+  		
+		async function controllStart(){
+			var motorA = new Artec.ArtecRobo.Motor(atcRobo, 'M1');
+    		var motorB = new Artec.ArtecRobo.Motor(atcRobo, 'M2');
+			var servo13 = new Artec.ArtecRobo.ServoMotor(atcRobo, 'P13');
+			var servo14 = new Artec.ArtecRobo.ServoMotor(atcRobo, 'P14');
+			var angleServo13 = 90;
+			var angleServo14 = 90;
+			var timeoutIdServo13 = null;
+
+    		motorA.stop();
+    		motorB.stop();
+    		motorA.power(100);
+    		motorB.power(100);			
+			servo13.setAngle(angleServo13);
+			servo14.setAngle(angleServo14);
+			ledOn();
+			
+			$("#motorA-ccw").prop('disabled', false);
+			$("#motorA-cw").prop('disabled', false);
+			$("#motorB-ccw").prop('disabled', false);
+			$("#motorB-cw").prop('disabled', false);
+			$("#launcher-up").prop('disabled', false);
+			$("#launcher-down").prop('disabled', false);
+			$("#lauch-l").prop('disabled', false);
+			$("#lauch-r").prop('disabled', false);
+			
+			//motor controll
+    		$("#motorA-ccw").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			motorA.ccw();
+    		});
+			$("#motorA-ccw").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+      			motorA.stop();
+    		});
+
+    		$("#motorA-cw").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			motorA.cw();
+    		});
+			$("#motorA-cw").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+      			motorA.stop();
+    		});			
+			$("#motorB-ccw").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			motorB.ccw();
+    		});
+			$("#motorB-ccw").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+      			motorB.stop();
+    		});			
+			$("#motorB-cw").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			motorB.cw();
+    		});
+			$("#motorB-cw").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+      			motorB.stop();
+    		});
+			
+			// servomotor control
+			$("#launcher-up").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			if (!timeoutIdServo13){
+					timeoutIdServo13 = setTimeout(launcherUp, 50);
+				}
+    		});
+			$("#launcher-down").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			if (!timeoutIdServo13){
+					timeoutIdServo13 = setTimeout(launcherDown, 50);
+				}
+    		});
+			$("#launcher-up").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+				if (timeoutIdServo13){
+      				clearTimeout(timeoutIdServo13);
+					timeoutIdServo13 = null;
+				}
+    		});
+			$("#launcher-down").on("touchend mouseup" , async (event) => {
+				event.preventDefault();
+      			if (timeoutIdServo13){
+      				clearTimeout(timeoutIdServo13);
+					timeoutIdServo13 = null;
+				}
+    		});			
+			$("#lauch-l").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			servo14.setAngle(0);
+				await atcRobo.studuinoBit.wait(500);
+				servo14.setAngle(90);
+    		});
+			$("#lauch-r").on("touchstart mousedown" , async (event) => {
+				event.preventDefault();
+      			servo14.setAngle(180);
+				await atcRobo.studuinoBit.wait(500);
+				servo14.setAngle(90);
+    		});			
+			function launcherUp(){
+				angleServo13 = angleServo13 < 135 ? angleServo13+1 : 135;
+				servo13.setAngle(angleServo13);
+				if(timeoutIdServo13){
+					setTimeout(launcherUp, 50);
+				}
+			};
+			function launcherDown(){
+				angleServo13 = angleServo13 > 45 ? angleServo13-1 : 0;
+				servo13.setAngle(angleServo13);
+				if(timeoutIdServo13){
+					setTimeout(launcherDown, 50);
+				}
+			};
+			
+			// for checking the connection to wifi
+			async function ledOn() {
+    			atcRobo.studuinoBit.led.on();
+  			};
+  		};
+
+	</script>
+</body>
+</html>
