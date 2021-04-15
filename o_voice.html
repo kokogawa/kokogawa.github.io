@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body>
+	<div class="container-fluid">
+		<div class="position-absolute fixed-bottom" id="obniz-debug"></div>
+		<nav class="row navbar navbar-expand-lg navbar-light bg-light">
+			<h1 class="display-4" style="font-size:2em">Voice controller</h1>
+			<form class="form-inline ml-md-4">
+				<input id="obnizId" class="form-control mr-sm-2" type="text" placeholder="obniz ID" aria-label="obniz ID">
+     			<button id="btnConnect" class="btn btn-success my-2 my-sm-0"  type="submit">Connect</button>
+			</form>
+		</nav>
+		<div class="row align-items-center mt-5">
+			<button id="btnRecord" class="btn btn-danger col-sm-6 offset-sm-3" style="font-size:2em;" disabled>Record</button>
+		</div>
+		<div class="row align-items-center mt-5">
+			<div id="message" class="col-sm-6 offset-sm-3" style="font-size:1.5em; text-align: center;">・・・・</div>
+		</div>
+	</div>
+
+	<script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
+	<script src="https://unpkg.com/obniz@2.2.0/obniz.js"></script>
+	<script src="https://artec-kk.github.io/obniz-artecrobo2/artec.js"></script>
+	<script>
+		SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+		const recognition = new SpeechRecognition();
+		var atcRobo = null
+		var stubit = null
+		
+		$("#btnConnect").on("click", (e) => {
+			e.preventDefault();
+			var obnizId = $("#obnizId").val();
+			try{
+				atcRobo = new Artec.ArtecRobo(obnizId);
+				atcRobo.onconnect = controllStart;
+				stubit = atcRobo.studuinoBit
+			}
+			catch(err){
+				alert("obniz-IDに誤りがあります。");
+				console.log(err)
+			}
+		});
+		
+		async function controllStart(){
+			var pattern_on = new RegExp("^(ライト|らいと).*(つけて|つける|点灯)$", "gu");
+			var pattern_off = new RegExp("^(ライト|らいと).*(消して|けして|消灯|消す|けす)$", "gu");
+			var pattern_melody = new RegExp("^(曲|音楽|音).*(流して|鳴らして|鳴らす|流す)$", "gu");
+			
+			$("#btnRecord").prop("disabled", false);
+			ledOn();
+			
+			$("#btnRecord").on("click", () => {
+				recognition.start();
+			});
+			
+			recognition.onresult = (event) => {
+    			trans = event.results[0][0].transcript;
+				$("#message").html(trans);
+				if (trans.match(pattern_on)){
+					oneColor([0x1f, 0x1f, 0x1f]);
+				}
+				else if(trans.match(pattern_off)){
+					oneColor([0, 0, 0]);
+				}
+				else if(trans.match(pattern_melody)){
+					playMelody();
+				}
+  			};
+			
+			async function ledOn() {
+				stubit.led.on();
+			};
+			
+			async function oneColor(color) {
+        		stubit.display.off();
+        		for (let x = 0; x < 5; x++) {
+          			for (let y = 0; y < 5; y++) {
+            			stubit.display.setPixel(x,y,color);
+						await stubit.wait(1);
+          			}
+        		}
+        		stubit.display.on();
+      		}
+				
+			async function playMelody() {
+				for(var i = 0; i < 2; i++){
+					await stubit.buzzer.onWait("C4");
+					await stubit.wait(600);
+					await stubit.buzzer.onWait("D4");
+					await stubit.wait(600);
+					await stubit.buzzer.onWait("E4");
+					await stubit.wait(1200);
+				}
+				stubit.buzzer.off();
+			};
+		};
+	</script>
+</body>
+</html>
